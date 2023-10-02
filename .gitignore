@@ -1,0 +1,8 @@
+# build
+build*/
+
+# explicit ignore
+*.ignore
+
+# IDE
+.vscode/

@@ -1,0 +1,44 @@
+
+eol: ascii = "\n"
+a: int32 = 3;
+x: int32 = 4;
+$i32add(a, x)
+$i32print (a), $asciiprint(eol), 123.99, "abc"
+c = 4
+d = 96
+letter: ascii = "a"
+
+b = false
+b2: bool = true
+$bprint(b); $bprint(b2); $asciiprint(eol)
+$lneg(b); $lneg(b2)
+$bprint(b); $bprint(b2); $asciiprint(eol)
+
+$i64print(c); $asciiprint(eol)
+$i64print(d); $asciiprint(eol)
+$i64add(c, d)
+$i64print(c); $asciiprint(eol)
+#(a, b) = (2, 3);
+
+# i: int = 4
+# j: int = i + 1
+# 
+# 
+# @main {
+#     if (i > j,
+#         ret i
+#     )
+#     $print j
+#     f = (a: int, b: int) -> a + b
+#     ret f(i, j)
+# }
+# 
+# 
+# if = (cond: bool, true_case: expr, [false_case]: expr) ->
+#     {
+#         br cond
+#         ret true_case // ret ret i
+#         ret false_case
+#     }
+# 
+# (int, int) a = 4;
