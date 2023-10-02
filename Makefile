@@ -66,6 +66,7 @@ CXXFLAGS += $(MIN_SIZE_RELEASE_FLAGS)
 LDFLAGS += $(MIN_SIZE_RELEASE_FLAGS)
 endif
 
+SRC_DIR = src
 BUILD_DIR = build/$(CONFIG)
 
 OBJS = string.o print.o source.o token.o lex.o parse.o diag.o analyze.o type.o expr.o timer.o csv.o profile.o main.o symbol.o scope.o intrinsic.o intermediate.o interpreter.o value.o cast.o# TODO main shouldn't be object
@@ -77,7 +78,7 @@ EXES := $(addprefix $(BUILD_DIR)/, $(EXES))
 
 all: mkdirs $(EXES) complete
 
-$(OBJS) : $(BUILD_DIR)/%.o : %.cc
+$(OBJS) : $(BUILD_DIR)/%.o : $(SRC_DIR)/%.cc
 	$(CXX) $(CXXFLAGS) -o $@ -c $^
 
 $(LIBS) : $(OBJS)
