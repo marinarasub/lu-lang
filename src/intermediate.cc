@@ -6,6 +6,7 @@
 #include "print.h"
 #include "intrinsic.h"
 #include "cast.h"
+#include "expr.h"
 #include "internal/debug.h"
 #include "internal/type_printer.h"
 #include "internal/value_printer.h"
@@ -86,6 +87,13 @@ intermediate intermediate::create_tuple(intermediate_tuple&& tup)
     return i;
 }
 
+intermediate intermediate::create_halt()
+{
+    intermediate i;
+    i._inst = HALT;
+    return i;
+}
+
 intermediate::intermediate() : _inst(ILLEGAL) {}
 
 intermediate::~intermediate()
@@ -148,6 +156,8 @@ intermediate& intermediate::create(intermediate&& other)
     case intermediate::BRANCH:
         new(&this->br) intermediate_branch(move(other.br));
         break;
+    case intermediate::HALT:
+        break;
     default:
         throw internal_except_unhandled_switch(to_string(_inst));
     }
@@ -187,6 +197,8 @@ intermediate& intermediate::create(const intermediate& other)
         break;
     case intermediate::BRANCH:
         new(&this->br) intermediate_branch((other.br));
+        break;
+    case intermediate::HALT:
         break;
     default:
         throw internal_except_unhandled_switch(to_string(_inst));
@@ -238,6 +250,8 @@ void intermediate::destroy()
         break;
     case intermediate::BRANCH:
         br.~intermediate_branch();
+        break;
+    case intermediate::HALT:
         break;
     default:
         throw internal_except_unhandled_switch(to_string(_inst));
@@ -309,53 +323,57 @@ const char* intermediate_op_cstr(intermediate::intermediate_op op)
         return "RETURN";
     case intermediate::BRANCH:
         return "BRANCH";
+    case intermediate::HALT:
+        return "HALT";
     default:
-        throw internal_except_todo();
+        throw internal_except_unhandled_switch(to_string(op));
     }   
 }
 
 namespace internal
 {
 
-    bool isliteral(const analyze_expr& ae)
-    {
-        return expr::_label_LITERAL_FIRST <= ae.kind() && ae.kind() <= expr::_label_LITERAL_LAST;
-    }
+    // bool isliteral(const analyze_expr& ae)
+    // {
+    //     return expr::_label_LITERAL_FIRST <= ae.kind() && ae.kind() <= expr::_label_LITERAL_LAST;
+    // }
 
-    bool isvariable(const analyze_expr& ae)
-    {
-        return ae.kind() == expr::VARIABLE || ae.kind() == expr::TYPED_VARIABLE;
-    }
+    // bool isvariable(const analyze_expr& ae)
+    // {
+    //     return ae.kind() == expr::VARIABLE || ae.kind() == expr::TYPED_VARIABLE;
+    // }
 
-    bool istypedvariable(const analyze_expr& ae)
-    {
-        return ae.kind() == expr::TYPED_VARIABLE;
-    }
+    // bool istypedvariable(const analyze_expr& ae)
+    // {
+    //     return ae.kind() == expr::TYPED_VARIABLE;
+    // }
 
-    bool isassign(const analyze_expr& ae)
-    {
-        return ae.kind() == expr::ASSIGN;
-    }
+    // bool isassign(const analyze_expr& ae)
+    // {
+    //     return ae.kind() == expr::ASSIGN;
+    // }
 
-    bool iscall(const analyze_expr& ae)
-    {
-        return ae.kind() == expr::CALL;
-    }
+    // bool iscall(const analyze_expr& ae)
+    // {
+    //     return ae.kind() == expr::CALL;
+    // }
 
-    bool istuple(const analyze_expr& ae)
-    {
-        return ae.kind() == expr::TUPLE;
-    }
+    // bool istuple(const analyze_expr& ae)
+    // {
+    //     return ae.kind() == expr::TUPLE;
+    // }
 
-    bool istype(const analyze_expr& ae)
-    {
-        return ae.kind() == expr::TUPLE_TYPE || ae.kind() == expr::FUNCTION_TYPE || ae.kind() == expr::NAMED_TYPE;
-    }
+    // bool istype(const analyze_expr& ae)
+    // {
+    //     return ae.kind() == expr::TUPLE_TYPE || ae.kind() == expr::FUNCTION_TYPE || ae.kind() == expr::NAMED_TYPE;
+    // }
 
-    bool isintrinsic(const analyze_expr& ae)
-    {
-        return ae.kind() == expr::INTRINSIC;
-    }
+    // bool isintrinsic(const analyze_expr& ae)
+    // {
+    //     return ae.kind() == expr::INTRINSIC;
+    // }
+
+    
 
     struct intermediate_transformer
     {
@@ -577,6 +595,11 @@ namespace internal
             
         }
 
+        intermediate make_halt()
+        {
+            return intermediate::create_halt();
+        }
+
         void transform_top_analyze_expr(const analyze_expr& ae)
         {
             if (isliteral(ae))
@@ -654,13 +677,33 @@ namespace internal
                 {
                     transform_top_analyze_expr(ae[i]);
                 }
-            }   
+            }
+            else if (isblock(ae))
+            {
+                for (size_t i = 0; i < ae.arity(); ++i)
+                {
+                    transform_top_analyze_expr(ae[i]);
+                }
+            }
+            else if (isblank(ae))
+            {
+                // pass
+
+            }
+            else 
+            {
+                throw internal_except_todo();
+            }
         }
 
         void transform_next()
         {
             transform_top_analyze_expr(curr());
             advance();
+            if (stop())
+            {
+                emit(make_halt());
+            }
         }
 
         void transform()

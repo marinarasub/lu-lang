@@ -45,12 +45,19 @@ struct intermediate_printer
             return "TODO";
         case intermediate::BRANCH:
             return "TODO";
+        case intermediate::HALT:
+            return print_halt();
         default:
             throw internal_except_unhandled_switch(intermediate_op_cstr(i.op()));
         }
     }
 
 private:
+    string print_halt()
+    {
+        return "";
+    }
+
     string print_constant(const intermediate_load_constant& imm)
     {
         return intermediate_value_printer().print(p_ip->context().symbols(), p_ip->context().types(), imm.val);

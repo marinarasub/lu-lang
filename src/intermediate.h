@@ -156,7 +156,7 @@ struct intermediate
         CALL, // jump to intermediate, assign parameters with called intermeidates
         RETURN,
         BRANCH, // uncoditional can just be br true
-        
+        HALT,
     };
 
     template <typename... ArgsT> static intermediate emplace_load_constant(ArgsT&&... args) { return create_load_constant(intermediate_load_constant(forward<ArgsT>(args)...)); }
@@ -172,6 +172,7 @@ struct intermediate
     static intermediate create_intrinsic(intermediate_intrinsic);
     static intermediate create_call(intermediate_call&&);
     static intermediate create_tuple(intermediate_tuple&&);
+    static intermediate create_halt();
 
     intermediate();
 

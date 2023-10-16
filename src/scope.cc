@@ -105,9 +105,14 @@ symbol_id symbol_table::find_innermost(lexical_scope* p_scope, string_view sname
     return p_scope->find_innermost_local(sname);
 }
 
-symbol_id symbol_table::find_local(lexical_scope* p_scope, string_view sname) const
+symbol_id symbol_table::find_innermost_local(lexical_scope* p_scope, string_view sname) const
 {
     return p_scope->find_innermost_local(sname);
+}
+
+symbol_id symbol_table::find_local(lexical_scope* p_scope, string_view sname) const
+{
+    return p_scope->find_local(sname);
 }
 
 symbol& symbol_table::declare_global(symbol&& sym)

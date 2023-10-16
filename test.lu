@@ -1,9 +1,12 @@
-
+# f = () -> 333
 eol: ascii = "\n"
-a: int32 = 3;
-x: int32 = 4;
-$i32add(a, x)
-$i32print (a), $asciiprint(eol), 123.99, "abc"
+{
+    eol: ascii = "\t"
+    a: int32 = 3;
+    x: int32 = 4;
+    $i32add(a, x)
+    $i32print (a), $asciiprint(eol), 123.99, "abc"
+}
 c = 4
 d = 96
 letter: ascii = "a"

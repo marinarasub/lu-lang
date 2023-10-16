@@ -1,9 +1,9 @@
 #include "analyze.h"
 
 #include "utility.h"
-#include "internal/type_printer.h"
 #include "value.h"
 #include "enum.h"
+#include "internal/analyze_printer.h"
 
 namespace lu
 {
@@ -163,262 +163,8 @@ analyze_expr_tree::analyze_expr_tree()
     //declare_global_builtin_types(_ctxt.types(), _ctxt.symbols());
 }
 
-
-//////////////////////
 namespace internal
 {
-    struct analyze_expr_printer
-    {
-        analyze_expr_printer(const analyze_expr_tree* p_aet) : _indent(0), p_aet(p_aet) {}
-
-        string operator()(const analyze_expr_tree& et)
-        {
-            string s;
-            for (size_t i = 0; i < et.size(); ++i)
-            {
-                s.append(print(et[i])).append(";\n");
-            }
-            return s;
-        }
-
-        string operator()(const analyze_expr& e)
-        {
-            return print(e);
-        }
-
-        string print(const analyze_expr& e)
-        {
-            //string s;
-            //s.append(to_string("[type=").append(to_string(e.eval_type()))).append(" sid=").append(symbol_id_string(e.sid())).append("]: ");
-            switch (e.kind())
-            {
-            case expr::BLANK:
-                return "<blank>";
-            case expr::TRUE_LITERAL: /* fallthrough */
-            case expr::FALSE_LITERAL: /* fallthrough */
-            case expr::STRING_LITERAL: /* fallthrough */
-            case expr::DECIMAL_LITERAL: /* fallthrough */
-            case expr::INTEGER_LITERAL:
-                return print_literal(e);
-            case expr::INTRINSIC:
-                return print_intrinsic(e);
-            case expr::VARIABLE:
-                return print_variable(e);
-            case expr::TYPED_VARIABLE:
-                return print_variable(e);
-            // statments are one of these 3:
-            case expr::LABEL:
-                return string::join("lab", e.text());
-            case expr::BRANCH:
-                return string::join("br", e.text(), (e.empty() ? "" : string(" ").append(print(e[0]))));
-            case expr::RETURN:
-                return string::join("ret ", e.text(), (e.empty() ? "" : string(" ").append(print(e[0]))));
-            case expr::TUPLE:
-            {
-                return print_tuple(e);
-            }
-            case expr::BLOCK:
-            {
-                return print_block(e);
-            }
-            case expr::CALL:
-            {
-                return print_call(e);
-            }
-            case expr::PARAM:
-                return string::join(e.text(), ": ", print(e[0]));
-            case expr::DEFAULT_PARAM:
-                return string::join(print(e[0]), " dflt ", print(e[1]));
-            case expr::ASSIGN:
-                // TODO assert size is 2? on constsruction
-                return string::join("(", print(e[0]), " <- ", print(e[1]), ")");
-            case expr::FUNCTION:
-                return print_function(e);
-            case expr::NAMED_TYPE:
-                return string::join(e.text());
-            case expr::FUNCTION_TYPE:
-                return print_function_type_expr(e);
-            case expr::TUPLE_TYPE:
-                return print_tuple_type_expr(e);
-            default:
-                return "???";
-            }
-        }
-    private:
-
-        string print_analyze_expr_type(const analyze_expr& e)
-        {
-            type_id tid = e.eval_type();
-            return type_printer().print(p_aet->context().types(), tid);
-        }
-
-        string print_literal(const analyze_expr& e)
-        {
-            return string::join(e.text(), " [", print_analyze_expr_type(e), "]");
-            
-        }
-
-        string print_function(const analyze_expr& e)
-        {
-            return string::join("(", print(e[0]), " -> ", print(e[1]), string::join("[", print_analyze_expr_type(e), "]"), ")");
-        }
-
-        string print_tuple_type_expr(const analyze_expr& e)
-        {
-            string s;
-            s.append("(");
-            if (e.arity() > 0)
-            {
-                s.append("tt ");
-                size_t i = 0;
-                for (; i < e.arity() - 1; ++i)
-                {
-                    s.append(print(e[i]));
-                    s.append(", ");
-                }
-                s.append(print(e[i])); // last arg w/o trialing comma
-                
-            }
-            s.append(")");
-            return s;
-        }
-
-        string print_function_type_expr(const analyze_expr& e)
-        {
-            // assert arity is 2?
-            string s;
-            s.append("(");
-            s.append(print(e[0]));
-            s.append(" -> ");
-            s.append(print(e[1]));
-            s.append(")");
-            return s;
-        }
-        
-        string print_intrinsic(const analyze_expr& e)
-        {
-            return string::join(e.text(), " [", print_analyze_expr_type(e), "]");
-        }
-
-        string print_call(const analyze_expr& e)
-        {
-            assert(e.arity() == 2); //TODO maybe assert on construction
-            // assert type is blk
-            string s;
-            s.append("(call ");
-            s.append(print(e[0]));
-            s.append(" ");
-            s.append(print(e[1]));
-            s.append(")");
-            return s;
-        }
-
-        string print_tuple(const analyze_expr& e)
-        {
-            string s;
-            s.append("(");
-            if (e.arity() > 0)
-            {
-                s.append("tup ");
-                size_t i = 0;
-                for (; i < e.arity() - 1; ++i)
-                {
-                    s.append(print(e[i]));
-                    s.append(", ");
-                }
-                s.append(print(e[i])); // last arg w/o trialing comma
-                
-            }
-            s.append(" ");
-            s.append(string::join("[", print_analyze_expr_type(e), "]"));
-            s.append(")");
-            return s;
-        }
-
-        string print_variable(const analyze_expr& e)
-        {
-            string s;
-            s.append("(var ").append(e.text());
-            if (e.arity() > 0) // has type
-            {
-                s.append(": ").append(print(e[0]));
-            }
-            s.append(" ");
-            s.append(string::join("[", print_analyze_expr_type(e), "]"));
-            s.append(")");
-            return s;
-        }
-
-        string print_block(const analyze_expr& e)
-        {
-            if (e.empty()) return to_string("{}");
-            // assert type is blk
-            string s;
-            s.append("{");
-            ++_indent;
-            for (size_t i = 0; i < e.arity(); ++i)
-            {
-                s.append(newline());
-                s.append(print(e[i]));
-            }
-            --_indent;
-            s.append(newline());
-            s.append("}");
-            return s;
-        }
-
-        string newline()
-        {
-            return string("\n").append(string(_indent * 4, ' '));
-        }
-
-        size_t _indent;
-        const analyze_expr_tree* p_aet;
-    };
-}
-
-namespace internal
-{
-    bool isliteral(const parse_expr& pe)
-    {
-        return expr::_label_LITERAL_FIRST <= pe.kind() && pe.kind() <= expr::_label_LITERAL_LAST;
-    }
-
-    bool isvariable(const parse_expr& pe)
-    {
-        return pe.kind() == expr::VARIABLE || pe.kind() == expr::TYPED_VARIABLE;
-    }
-
-    bool istypedvariable(const parse_expr& pe)
-    {
-        return pe.kind() == expr::TYPED_VARIABLE;
-    }
-
-    bool isassign(const parse_expr& pe)
-    {
-        return pe.kind() == expr::ASSIGN;
-    }
-
-    bool iscall(const parse_expr& pe)
-    {
-        return pe.kind() == expr::CALL;
-    }
-
-    bool istuple(const parse_expr& pe)
-    {
-        return pe.kind() == expr::TUPLE;
-    }
-
-    bool istype(const parse_expr& pe)
-    {
-        return pe.kind() == expr::TUPLE_TYPE || pe.kind() == expr::FUNCTION_TYPE || pe.kind() == expr::NAMED_TYPE;
-    }
-
-    bool isintrinsic(const parse_expr& pe)
-    {
-        return pe.kind() == expr::INTRINSIC;
-    }
-
     string_view intr_name(string_view sv)
     {
         assert(sv.size() > 0 && sv[0] == '$');
@@ -569,6 +315,11 @@ namespace internal
         {
             symbol_id sid = symbols().find_innermost(curr_scope(), varname);
             return sid != symbol::INVALID_ID;
+        }
+
+        symbol_id find_local(string_view varname)
+        {
+            return symbols().find_local(curr_scope(), varname);
         }
 
         symbol_id find_innermost(string_view varname)
@@ -729,6 +480,22 @@ namespace internal
             }
         }
 
+        analyze_expr analyze_block(const parse_expr& pe)
+        {
+            array<analyze_expr> subs(pe.arity());
+
+            begin_scope();
+            for (size_t i = 0; i < pe.arity(); ++i)
+            {
+                subs[i] = analyze_parse_expr(pe[i], true);
+                // TODO branch and return type
+            }
+            end_scope();
+            // TODO return type
+            type_id rtid = types().find_void_type();
+            return analyze_expr::create_vanilla(pe, rtid, move(subs));
+        }
+
         analyze_expr analyze_type(const parse_expr& pe)
         {
             // TODO analyze the type. add it to type reg.
@@ -767,14 +534,15 @@ namespace internal
             return analyze_expr::create_hastype(pe, /*btid*/ typeid_tid, user_tid); // base type of a type-expr is typeid, and tid (the user tid) is what type is expressed
         }
 
-        analyze_expr analyze_variable(const parse_expr& pe, type_id hint_type)
+        analyze_expr analyze_variable(const parse_expr& pe, type_id hint_tid)
         {
             assert(isvariable(pe));
 
             string_view varname = pe.text();
-            symbol_id sid = find_innermost(varname);
+            
             if (istypedvariable(pe))
             {
+                symbol_id sid = find_local(varname);
                 analyze_expr type_ae = analyze_type(pe[expr::TYPED_VARIABLE_TYPE_IDX]);
                 if (sid != symbol::INVALID_ID)
                 {
@@ -789,9 +557,10 @@ namespace internal
             }
             else // normal varaible reference (if not exist, implicit declare)
             {
-                if (hint_type.is(LITERAL))
+                symbol_id sid = find_innermost(varname);
+                if (hint_tid.is(LITERAL))
                 {
-                    hint_type = choose_runtime_literal_type(types().find_type(hint_type).lit);
+                    hint_tid = choose_runtime_literal_type(types().find_type(hint_tid).lit);
                 }
                 if (sid != symbol::INVALID_ID)
                 {
@@ -802,24 +571,24 @@ namespace internal
                 else
                 {
                     // implcit
-                    sid = symbols().declare(curr_scope(), symbol(hint_type, varname)).sid;
+                    sid = symbols().declare(curr_scope(), symbol(hint_tid, varname)).sid;
                 }
                 // TODO pick non-literal type base type
-                return analyze_expr::create_hassymbol(pe, hint_type, sid, {});
+                return analyze_expr::create_hassymbol(pe, hint_tid, sid, {});
             }
             // TODO check type conversion from hint_type
         }
 
-        analyze_expr analyze_assignment_target(const parse_expr& pe, type_id rhs_type)
+        analyze_expr analyze_assignment_target(const parse_expr& pe, type_id rhs_tid)
         {
             if (isvariable(pe))
             {
-                return analyze_variable(pe, rhs_type);
+                return analyze_variable(pe, rhs_tid);
             }
             else if (istuple(pe))
             {
                 // check rhs_type is tuple
-                type maybe_type = types().find_type(rhs_type);
+                type maybe_type = types().find_type(rhs_tid);
                 if (!(maybe_type.tclass == TUPLE && maybe_type.tup.arity() == pe.arity())) // TODO now use strict same size, but maybe allow implicit partial unpack etc.
                 {
                     throw internal_except_todo();
@@ -832,12 +601,36 @@ namespace internal
                     maybe_type.tup[i].tid = subs[i].base_type();
                 }
                 // update type with what target's tuple type shuld be (ie no literals)
-                rhs_type = types().find_type_id_auto_register(maybe_type);
+                rhs_tid = types().find_type_id_auto_register(maybe_type);
                 // TODO partial conversion
-                return analyze_expr::create_vanilla(pe, rhs_type, move(subs));
+                return analyze_expr::create_vanilla(pe, rhs_tid, move(subs));
             }
             // else error
             return analyze_expr();
+        }
+
+        analyze_expr analyze_function_params(const parse_expr& pe)
+        {
+            throw internal_except_todo();
+            //return analyze_assignment_target(pe, );
+        }
+
+        analyze_expr analyze_function(const parse_expr& pe)
+        {
+            analyze_expr params = analyze_function_params(pe[expr::FUNCTION_PARAMS_IDX]);
+            analyze_expr body = analyze_parse_expr(pe[expr::FUNCTION_BODY_IDX], false);
+            array<function_type::param> ftparams;
+            if (params.eval_type().is(TUPLE))
+            {
+                internal_except_todo();
+            }
+            else
+            {
+                ftparams = { function_type::param(params.eval_type()) };
+            }
+            type_id tid = types().find_type_id_auto_register(type::emplace_function_type(/*ret tid*/ body.eval_type(), /*params tids*/ move(ftparams)));
+
+            return analyze_expr::create_vanilla(pe, tid, { params, body });
         }
 
         analyze_expr analyze_assignment_rhs(const parse_expr& pe)
@@ -931,7 +724,19 @@ namespace internal
                 type_id tid = types().find_type_id_auto_register(type::create_tuple_type(tuple_type(move(member_types))));
                 return analyze_expr::create_vanilla(pe, tid, move(subs)); // no sid since agian, no variables, tuple is unpacking into multiple vars
             }
-            return analyze_expr(); // TODO
+            else if (isfunction(pe))
+            {
+                return analyze_function(pe);
+            }
+            else if (isblock(pe))
+            {
+                return analyze_block(pe);
+            }
+            else if (isblank(pe))
+            {
+                return analyze_expr();
+            }
+            throw internal_except_unhandled_switch(to_string(pe.kind()));
         }
 
         analyze_expr analyze_next()

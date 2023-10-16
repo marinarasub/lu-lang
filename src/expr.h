@@ -25,6 +25,8 @@ struct expr
     LU_CONSTEXPR static size_t CALL_CALLEE_IDX = 0;
     LU_CONSTEXPR static size_t CALL_ARGS_IDX = 1;
     LU_CONSTEXPR static size_t TYPED_VARIABLE_TYPE_IDX = 0;
+    LU_CONSTEXPR static size_t FUNCTION_PARAMS_IDX = 0;
+    LU_CONSTEXPR static size_t FUNCTION_BODY_IDX = 1;
 
     enum expr_kind
     {
@@ -39,7 +41,7 @@ struct expr
         _label_LITERAL_LAST = INTEGER_LITERAL,
 
         INTRINSIC,
-        VARIABLE, // (a var's name) str is varname, expr[0] is type if size > 0
+        VARIABLE, // (a var's name) str is varname, expr[0] is tye if size > 0
         TYPED_VARIABLE,
         //UNARY,
         //GROUP, // group only exists as parse time.
@@ -49,15 +51,15 @@ struct expr
         TUPLE, // expr[0..] are any expr
         CALL, // str is funcname, expr[0..n] are any expr
         ASSIGN, // expr[0] is target, expr[1] is 0
-        FUNCTION, // expr[0] is body, expr[1] is return type, expr[2..] are params
+        FUNCTION, // expr[0] is body, expr[1] is return tye, expr[2..] are params
 
         // 
-        PARAM, // or tuple/struct member, str is param name, expr[1] is type, expr[2] is default-init
+        PARAM, // or tuple/struct member, str is param name, expr[1] is tye, expr[2] is default-init
         DEFAULT_PARAM,
-        // types
-        NAMED_TYPE, // (a type's name) str is name of type
-        FUNCTION_TYPE, // expr[0] is return type, expr[1..] are arg types
-        TUPLE_TYPE, // expr[i] is either named type, 
+        // tyes
+        NAMED_TYPE, // (a tye's name) str is name of tye
+        FUNCTION_TYPE, // expr[0] is return tye, expr[1..] are arg tyes
+        TUPLE_TYPE, // expr[i] is either named tye, 
         // pseudo-expr, but treat as expr for convinience
         LABEL, // nah label is expr with 0 or 1 sub.
         BRANCH,
@@ -91,6 +93,61 @@ private:
 };
 
 expr::expr_kind token_to_expr_literal_kind(token::token_kind);
+
+LU_CONSTEXPR bool isliteral(const expr& e)
+{
+    return expr::_label_LITERAL_FIRST <= e.kind() && e.kind() <= expr::_label_LITERAL_LAST;
+}
+
+LU_CONSTEXPR bool isvariable(const expr& e)
+{
+    return e.kind() == expr::VARIABLE || e.kind() == expr::TYPED_VARIABLE;
+}
+
+LU_CONSTEXPR bool istypedvariable(const expr& e)
+{
+    return e.kind() == expr::TYPED_VARIABLE;
+}
+
+LU_CONSTEXPR bool isassign(const expr& e)
+{
+    return e.kind() == expr::ASSIGN;
+}
+
+LU_CONSTEXPR bool iscall(const expr& e)
+{
+    return e.kind() == expr::CALL;
+}
+
+LU_CONSTEXPR bool istuple(const expr& e)
+{
+    return e.kind() == expr::TUPLE;
+}
+
+LU_CONSTEXPR bool istype(const expr& e)
+{
+    return e.kind() == expr::TUPLE_TYPE || e.kind() == expr::FUNCTION_TYPE || e.kind() == expr::NAMED_TYPE;
+}
+
+LU_CONSTEXPR bool isintrinsic(const expr& e)
+{
+    return e.kind() == expr::INTRINSIC;
+}
+
+LU_CONSTEXPR bool isfunction(const expr& e)
+{
+    return e.kind() == expr::FUNCTION;
+}
+
+LU_CONSTEXPR bool isblock(const expr& e)
+{
+    return e.kind() == expr::BLOCK;
+}
+
+LU_CONSTEXPR bool isblank(const expr& e)
+{
+    return e.kind() == expr::BLANK;
+}
 
 }
 

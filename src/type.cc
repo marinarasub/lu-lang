@@ -39,9 +39,18 @@ bool intrinsic_type::operator<(const intrinsic_type& other) const
     }
 }
 
-bool tuple_type::member::operator<(const member& other) const
+bool keyword_type::operator<(const keyword_type& other) const
 {
     return (this->tid != other.tid) ? (this->tid < other.tid) : (this->name < other.name);
+}
+
+bool keyword_type::operator==(const keyword_type& other) const
+{
+    return (this->tid == other.tid) && (this->name == other.name);
+}
+bool keyword_type::operator!=(const keyword_type& other) const
+{
+    return !(*this == other);
 }
 
 bool tuple_type::operator<(const tuple_type& other) const
@@ -240,7 +249,7 @@ type_id type::param_type(size_t idx) const
     switch (tclass)
     {
     case type_class::FUNCTION:
-        return this->fun[idx];
+        return this->fun[idx].tid;
     case type_class::INTRINSIC:
         return this->intr[idx];
     default:
@@ -534,6 +543,11 @@ type_id type_registry::find_type_id(const type& ty) const
     return it->second;
 }
 
+type_id type_registry::find_void_type() const
+{
+    return find_type_id(type::create_void_type());
+}
+
 type_id type_registry::find_builtin_type_id(builtin_type binty) const
 {
     return find_type_id(type::create_builtin_type(move(binty)));
@@ -603,7 +617,7 @@ void type_registry::check_subtypes(const type& ty)
     {
         for (size_t i = 0; i < ty.fun.param_count(); ++i)
         {
-            check_exists(ty.fun[i]);
+            check_exists(ty.fun[i].tid);
         }
         check_exists(ty.fun.ret);
         return;
@@ -699,9 +713,9 @@ string type_registry::name(type ty) const
             0,
             ty.fun.param_count(),
             string(),
-            [this](const string& acc, type_id prm)
+            [this](const string& acc, const function_type::param& prm)
             {
-                return string::join(acc, name(prm));
+                return string::join(acc, name(prm.tid)); // TODO param name
             });
         return string::join(s, " -> ", name(ty.fun.ret));
     }

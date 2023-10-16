@@ -120,6 +120,30 @@ struct array
         return this->size() < other.size();
     }
 
+    bool operator==(const array& other) const
+    {
+        if (this->size() != other.size()) return false;
+        size_t n = std::min(this->size(), other.size());
+        size_t i;
+        for (i = 0; i < n; ++i)
+        {
+            if (this->at(i) < other.at(i))
+            {
+                return false;
+            }
+            else if (other.at(i) < this->at(i))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool operator!=(const array& other) const
+    {
+        return !(*this == other);
+    }
+
 private:
     T* alloc(size_t n)
     {

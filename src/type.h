@@ -153,36 +153,41 @@ struct intrinsic_type
     bool operator<(const intrinsic_type& other) const;
 };
 
+struct keyword_type
+{
+    keyword_type() {}
+    keyword_type(type_id tid) : tid(tid), name("") {}
+    keyword_type(type_id tid, string_view sname) : tid(tid), name(sname) {}
+
+    keyword_type(keyword_type&& other) : tid(move(other.tid)), name(move(other.name)) {}
+    keyword_type(const keyword_type& other) : tid((other.tid)), name((other.name)) {}
+
+    keyword_type& operator=(keyword_type&& other)
+    {
+        this->tid = move(other.tid);
+        this->name = move(other.name);
+        return *this;
+    }
+
+    keyword_type& operator=(const keyword_type& other)
+    {
+        this->tid = (other.tid);
+        this->name = (other.name);
+        return *this;
+    }
+
+    type_id tid;
+    string name;
+    //intermediate_expr* dflt; //TODO deafult shouldn't be parse_expr so what should it be?
+
+    bool operator<(const keyword_type& other) const;
+    bool operator==(const keyword_type& other) const;
+    bool operator!=(const keyword_type& other) const;
+};
+
 struct tuple_type
 {   
-    struct member
-    {
-        member() {}
-        member(type_id tid, string_view sname) : tid(tid), name(sname) {}
-
-        member(member&& other) : tid(move(other.tid)), name(move(other.name)) {}
-        member(const member& other) : tid((other.tid)), name((other.name)) {}
-
-        member& operator=(member&& other)
-        {
-            this->tid = move(other.tid);
-            this->name = move(other.name);
-            return *this;
-        }
-
-        member& operator=(const member& other)
-        {
-            this->tid = (other.tid);
-            this->name = (other.name);
-            return *this;
-        }
-
-        type_id tid;
-        string name;
-        //intermediate_expr* dflt; //TODO deafult shouldn't be parse_expr so what should it be?
-
-        bool operator<(const member& other) const;
-    };
+    using member = keyword_type;
 
     tuple_type() {}
     tuple_type(array<member>&& mems) : members(move(mems)) {}
@@ -206,12 +211,15 @@ struct tuple_type
 
 struct function_type
 {
-    function_type(type_id ret, vector<type_id>&& params) : ret(ret), params(move(params)) {}
+    using param = keyword_type;
+
+    function_type(type_id ret, array<param>&& params) : ret(ret), params(move(params)) {}
 
     type_id ret;
-    vector<type_id> params;
+    array<param> params;
 
-    type_id operator[](size_t idx) const { return params[idx]; }
+    param& operator[](size_t idx) { return params[idx]; }
+    const param& operator[](size_t idx) const { return params[idx]; }
 
     size_t param_count() const { return params.size(); }
 
@@ -319,6 +327,7 @@ public:
     type_id find_type_id_auto_register(const type&); // reguster if not found and not basic type (literal, builtin, intrinsic)
     type_id register_type(const type&);
 
+    type_id find_void_type() const;
     type_id find_builtin_type_id(builtin_type) const;
     type_id find_literal_type_id(literal_type) const;
 

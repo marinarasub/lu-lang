@@ -191,6 +191,10 @@ namespace internal
                 throw internal_except_todo();
             case intermediate::BRANCH:
                 throw internal_except_todo();
+            case intermediate::HALT:
+                // TODO cleanup before exit
+                iaddr =  p_ip->size();
+                break;
             default:
                 throw internal_except_unhandled_switch(intermediate_op_cstr(intm.op()));
             }

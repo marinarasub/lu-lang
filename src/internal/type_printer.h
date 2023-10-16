@@ -46,9 +46,9 @@ private:
             {
                 for (size_t i = 0; i < nparam - 1; ++i)
                 {
-                    s.append(string::join(print_type_from_type_id(types, t.fun.params[i]), ", "));
+                    s.append(string::join(print_type_from_type_id(types, t.fun.params[i].tid), ", ")); // TODO param name
                 }
-                s.append(print_type_from_type_id(types, t.fun.params[nparam - 1]));
+                s.append(print_type_from_type_id(types, t.fun.params[nparam - 1].tid));
             }
             s.append(")");
             return string::join(s, " -> ", print_type_from_type_id(types, t.fun.ret));

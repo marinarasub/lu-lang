@@ -61,6 +61,7 @@ struct symbol_table
 
     symbol& declare(lexical_scope* p_scope, symbol&& sym);
     symbol_id find_innermost(lexical_scope* p_scope, string_view) const;
+    symbol_id find_innermost_local(lexical_scope* p_scope, string_view) const;
     symbol_id find_local(lexical_scope* p_scope, string_view) const;
 
     // unlike most languages, user definitions in top level are still considered file scoped, not global. global can added using keyword or be added by compiler for needed vars that are not intrinsic functions
