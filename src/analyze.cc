@@ -141,6 +141,22 @@ void analyze_expr::destroy()
     }
 }
 
+bool istuple_assignable(const analyze_expr& e)
+{
+    for (size_t i = 0; i < e.arity(); ++i)
+    {
+        if (!isassignable(e[i])) return false;
+    }   
+    return true;
+}
+
+bool isassignable(const analyze_expr& e)
+{
+    return e.kind() == expr::VARIABLE ||
+        e.kind() ==  expr::TYPED_VARIABLE ||
+        ((e.kind() == expr::TUPLE) && istuple_assignable(e));
+}
+
 
 size_t analyze_expr_tree::size() const
 {
@@ -220,7 +236,7 @@ namespace internal
                 diags::ANALYZE_TUPLE_ARITY_MISMATCH,
                 pe.srcref(),
                 pe.loc(),
-                move(string("tuples must be of same arity (size) ").append(types().name(t1)).append(" <-> ").append(types().name(t2)))
+                move(string("tuples must be of same arity (size) ").append(types().tyname(t1)).append(" <-> ").append(types().tyname(t2)))
             );
         }
 
@@ -231,7 +247,7 @@ namespace internal
                 diags::ANALYZE_TUPLE_ARITY_MISMATCH,
                 pe.srcref(),
                 pe.loc(),
-                move(string("call arguments must be of same arity as function parameters (size)").append(types().name(t1)).append(" <-> ").append(types().name(t2)))
+                move(string("call arguments must be of same arity as function parameters (size)").append(types().tyname(t1)).append(" <-> ").append(types().tyname(t2)))
             );
         }
 
@@ -242,7 +258,7 @@ namespace internal
                 diags::ANALYZE_NOT_CALLABLE,
                 pe.srcref(),
                 pe.loc(),
-                string::join("callee in call expression must be callable but is '", types().name(t), "'")
+                string::join("callee in call expression must be callable but is '", types().tyname(t), "'")
             );
         }
 
@@ -262,7 +278,7 @@ namespace internal
                 diags::ANALYZE_NOT_CONVERTIBLE,
                 pe.srcref(),
                 pe.loc(),
-                move(string("cannot convert from ").append(types().name(t1)).append(" to ").append(types().name(t2)))
+                move(string("cannot convert from ").append(types().tyname(t1)).append(" to ").append(types().tyname(t2)))
             );
         }
 
@@ -527,6 +543,14 @@ namespace internal
                 user_tid = nty_val.bin.tid;
                 break;
             }
+            case expr::TUPLE_TYPE:
+            {
+                throw internal_except_todo();
+            }
+            case expr::FUNCTION_TYPE:
+            {
+                throw internal_except_todo();
+            }
             default:
                 throw internal_except_unhandled_switch(to_string(pe.kind())); // TODO string functionfor kind.
             }
@@ -558,23 +582,23 @@ namespace internal
             else // normal varaible reference (if not exist, implicit declare)
             {
                 symbol_id sid = find_innermost(varname);
-                if (hint_tid.is(LITERAL))
-                {
-                    hint_tid = choose_runtime_literal_type(types().find_type(hint_tid).lit);
-                }
                 if (sid != symbol::INVALID_ID)
                 {
-                    // lookup reference
-                    const symbol& sym = symbols()[sid];
-                    return analyze_expr::create_hassymbol(pe, sym.tid, sid, {});
+                    // pass
                 }
                 else
                 {
-                    // implcit
+                    // implcit decl - choose a type
+                    // TODO: move typing responsiblity to assign_eval_type
+                    if (hint_tid.is(LITERAL))
+                    {
+                        hint_tid = choose_runtime_literal_type(types().find_type(hint_tid).lit);
+                    }
+                    // TODO assert hint is not undef, also handle other hints if needed
                     sid = symbols().declare(curr_scope(), symbol(hint_tid, varname)).sid;
                 }
-                // TODO pick non-literal type base type
-                return analyze_expr::create_hassymbol(pe, hint_tid, sid, {});
+                const symbol& sym = symbols()[sid];
+                return analyze_expr::create_hassymbol(pe, sym.tid, sid, {});
             }
             // TODO check type conversion from hint_type
         }
@@ -606,23 +630,102 @@ namespace internal
                 return analyze_expr::create_vanilla(pe, rhs_tid, move(subs));
             }
             // else error
-            return analyze_expr();
+            throw internal_except_todo();
+        }
+
+        // analyze a single param
+        analyze_expr analyze_function_param(const parse_expr& pe)
+        {
+            assert(isassignable(pe));
+
+            string_view varname = pe.text();
+
+            if (istypedvariable(pe))
+            {
+                symbol_id sid = find_local(varname);
+                analyze_expr type_ae = analyze_type(pe[expr::TYPED_VARIABLE_TYPE_IDX]);
+                if (sid != symbol::INVALID_ID)
+                {
+                    throw_diag(make_analyze_already_declared(pe)); // TODO seperate err for function param?
+                }
+                else
+                {
+                    sid = symbols().declare(curr_scope(), symbol(type_ae.tid(), varname)).sid;
+                }
+                
+                return analyze_expr::create_hassymbol(pe, type_ae.tid(), sid, { type_ae });
+            }
+            else if (isvariable(pe))
+            {
+                // TODO: implicit declare any? or infer from use later - or just force user to type?
+                throw internal_except_todo();
+            }
+            else if (istuple(pe))
+            {
+                // TODO: decide whether to handle as informal parameter (unnamed) or "unpack"
+                throw internal_except_todo();
+                // ftparams[i] = function_type::param(params[i].eval_type(), "");
+            }
+            // else error
+            throw internal_except_todo();
         }
 
         analyze_expr analyze_function_params(const parse_expr& pe)
         {
+            assert(isassignable(pe));
+
+            string_view varname = pe.text();
+
+            if (istypedvariable(pe))
+            {
+                return analyze_function_param(pe);
+            }
+            else if (isvariable(pe))
+            {
+                return analyze_function_param(pe);
+            }
+            else if (istuple(pe))
+            {
+                array<analyze_expr> subs(pe.arity());
+                array<tuple_type::member> member_types(pe.arity());
+                for (size_t i = 0; i < pe.arity(); ++i)
+                {
+                    subs[i] = analyze_function_param(pe[i]);
+                    member_types[i] = tuple_type::member(subs[i].eval_type(), ""); // no names since tuple is not a variable, but unpacking of varaibles.
+                }
+                type_id tid = types().find_type_id_auto_register(type::create_tuple_type(tuple_type(move(member_types))));
+                return analyze_expr::create_vanilla(pe, tid, move(subs));
+            }
+            // else error
             throw internal_except_todo();
-            //return analyze_assignment_target(pe, );
         }
 
         analyze_expr analyze_function(const parse_expr& pe)
         {
+            // TODO begin functions scope?
+            begin_scope();
             analyze_expr params = analyze_function_params(pe[expr::FUNCTION_PARAMS_IDX]);
             analyze_expr body = analyze_parse_expr(pe[expr::FUNCTION_BODY_IDX], false);
+            end_scope();
             array<function_type::param> ftparams;
             if (params.eval_type().is(TUPLE))
             {
-                internal_except_todo();
+                ftparams = array<function_type::param>(params.arity());
+                for (size_t i = 0; i < params.arity(); ++i)
+                {
+                    assert(isassignable(params[i]));
+
+                    if (isvariable(params[i]))
+                    {
+                        ftparams[i] = function_type::param(params[i].eval_type(), params[i].text());
+                    }
+                    else // isatuple_assignable
+                    {
+                        // TODO: decide whether to handle as informal parameter (unnamed) or "unpack"
+                        throw internal_except_todo();
+                        // ftparams[i] = function_type::param(params[i].eval_type(), "");
+                    }
+                }
             }
             else
             {
@@ -657,6 +760,96 @@ namespace internal
         analyze_expr analyze_callee(const parse_expr& pe)
         {
             return analyze_parse_expr(pe, false);
+        }
+
+        void assign_eval_type(const parse_expr& pe, analyze_expr& lhs, analyze_expr& rhs)
+        {
+            assert(!lhs.base_type().is(UNDEFINED));
+
+            const type& rhs_ty = types().find_type(rhs.base_type());
+            const type& lhs_ty = types().find_type(lhs.base_type());
+
+            // TODO check convertible !!!
+
+            if (lhs.base_type().is(LITERAL))
+            {
+                // TODO: literal shouldn't be allowed for lhs
+                throw internal_except_todo();
+            }
+            else if (lhs.base_type().is(VOID))
+            {
+                // TODO allow void assign?
+                throw internal_except_todo();
+            }
+            else if (lhs.base_type().is(BUILTIN))
+            {
+                // TODO check rhs base is literal, builtin or TODO 1-tuple
+                if (!rhs.base_type().is(LITERAL, BUILTIN))
+                {
+                    throw_diag(make_not_convertible(pe, rhs_ty, lhs_ty));
+                }
+                rhs.set_eval_type(lhs.base_type());
+            }
+            else if (lhs.base_type().is(INTRINSIC))
+            {
+                // TODO: again, shouldn't happen
+                throw internal_except_todo();
+            }
+            else if (lhs.base_type().is(FUNCTION))
+            {
+                if (rhs.base_type().is(FUNCTION))
+                {
+                    assert(lhs_ty.tclass == FUNCTION);
+                    assert(rhs_ty.tclass == FUNCTION);
+
+                    analyze_expr& params = rhs[expr::FUNCTION_PARAMS_IDX];
+                    analyze_expr& body = rhs[expr::FUNCTION_BODY_IDX];
+                    
+                    assert(lhs_ty.fun.param_count() == params.arity());
+                    
+                    if (lhs_ty.fun.param_count() != rhs_ty.fun.param_count())
+                    {
+                        throw_diag(make_analyze_tuple_arity_mismatch(pe, lhs_ty, rhs_ty)); // TODO seperate error for function param count
+                    }
+                    for (size_t i = 0; i < params.arity(); ++i)
+                    {
+                        params[i].set_eval_type(lhs_ty.fun[i].tid);
+                    }
+                    body.set_eval_type(lhs_ty.fun.ret);
+                    // TODO check actually set eval type for each subtype...
+                    rhs.set_eval_type(lhs.base_type());
+                }
+                else
+                {
+                    // TODO: implicit parameterless function
+                    throw internal_except_todo();
+                }
+            }
+            else if (lhs.base_type().is(TUPLE))
+            {
+                if (rhs.base_type().is(TUPLE))
+                {
+                    if (lhs.arity() != rhs.arity())
+                    {
+                        throw_diag(make_analyze_tuple_arity_mismatch(pe, lhs_ty, rhs_ty));
+                    }
+                    for (size_t i = 0; i < lhs.arity(); ++i)
+                    {
+                        assign_eval_type(pe, lhs[i], rhs[i]);
+                    }
+                    // TODO check actually set eval type for each subtype...
+                    rhs.set_eval_type(lhs.base_type());
+                }
+                // TODO allow struct to tuple implicit convert etc.
+                else
+                {
+                    throw_diag(make_not_convertible(pe, rhs_ty, lhs_ty));
+                }
+            }
+            else
+            {
+                internal_except_unhandled_switch(to_string(lhs.base_type()));
+            }
         }
 
         analyze_expr analyze_parse_expr(const parse_expr& pe, bool istop)
@@ -694,7 +887,7 @@ namespace internal
                 analyze_expr rhs = analyze_assignment_rhs(pe[1]);  assert(rhs.base_type() != type_id::UNDEFINED);
                 analyze_expr lhs = analyze_assignment_target(pe[0], rhs.base_type()); assert(lhs.base_type() != type_id::UNDEFINED);
                 // lhs needs to be converted to rhs // TODO check cast
-                rhs.set_eval_type(lhs.base_type());
+                assign_eval_type(pe, lhs, rhs);
                 return analyze_expr::create_vanilla(pe, lhs.eval_type(), { lhs, rhs }); // TODO reference type
             }
             else if (iscall(pe))

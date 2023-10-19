@@ -1,14 +1,16 @@
-# f = () -> 333
-eol: ascii = "\n"
+#f = () -> 333
+#ident = (a: int32) -> a
+#first = (a: int32, b: int32) -> a
+eol: ascii = "X"
 {
+    eol = "\n"
     eol: ascii = "\t"
-    a: int32 = 3;
+    a: int32 = 3# f();
     x: int32 = 4;
     $i32add(a, x)
     $i32print (a), $asciiprint(eol), 123.99, "abc"
 }
-c = 4
-d = 96
+(c, d) = (4, 96)
 letter: ascii = "a"
 
 b = false

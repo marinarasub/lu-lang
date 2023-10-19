@@ -97,12 +97,12 @@ symbol& symbol_table::declare(lexical_scope* p_scope, symbol&& sym)
 
 symbol_id symbol_table::find_innermost(lexical_scope* p_scope, string_view sname) const
 {
-    symbol_id sid = find_global(sname);
+    symbol_id sid = p_scope->find_innermost_local(sname);
     if (sid != symbol::INVALID_ID)
     {
         return sid; 
     }
-    return p_scope->find_innermost_local(sname);
+    return find_global(sname);
 }
 
 symbol_id symbol_table::find_innermost_local(lexical_scope* p_scope, string_view sname) const

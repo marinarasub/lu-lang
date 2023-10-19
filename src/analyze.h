@@ -102,6 +102,8 @@ private:
     array<analyze_expr> _subs;
 };
 
+bool isassignable(const analyze_expr& e);
+
 struct analyze_expr_tree
 {
     analyze_expr_tree();

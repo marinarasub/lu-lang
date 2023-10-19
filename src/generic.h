@@ -8,12 +8,15 @@ namespace lu
 namespace generic
 {
 
-// TODO
-// template <typename Iterable>
-// foldr()
-// {
-
-// }
+template <typename InputIterable, typename OutputIterable, typename MapFunc>
+void map(const InputIterable& in, OutputIterable& out, MapFunc f)
+{
+    auto out_it = std::back_inserter(out);
+    for (auto in_it = in.begin(); in_it != in.end(); ++in_it, ++out_it)
+    {
+        *out_it = f(*in_it);
+    }
+}
 
 template <typename Indexable, typename BaseT, typename FoldT>
 BaseT foldr(const Indexable& items, size_t begin, size_t end, BaseT base, FoldT func)

@@ -177,20 +177,20 @@ parse_expr& parse_expr::operator=(const parse_expr& other)
     return *this;
 }
 
-bool tuple_assignable(const parse_expr& e)
+bool istuple_assignable(const parse_expr& e)
 {
     for (size_t i = 0; i < e.arity(); ++i)
     {
-        if (!assignable(e[i])) return false;
+        if (!isassignable(e[i])) return false;
     }   
     return true;
 }
 
-bool assignable(const parse_expr& e)
+bool isassignable(const parse_expr& e)
 {
     return e.kind() == expr::VARIABLE ||
         e.kind() ==  expr::TYPED_VARIABLE ||
-        ((e.kind() == expr::TUPLE) && tuple_assignable(e));
+        ((e.kind() == expr::TUPLE) && istuple_assignable(e));
 }
 
 
@@ -621,7 +621,7 @@ namespace internal
             parse_expr params = block();
             if (accept(token::FORWARD_ARROW))
             {
-                if (!assignable(params))
+                if (!isassignable(params))
                 {
                     throw parse_except(p_log->push(make_expected_target())); // function just uses any assignable as params
                 }
@@ -638,7 +638,7 @@ namespace internal
             if (accept(token::EQUAL, token::BACKWARD_ARROW)) 
             {
                 // TODO assert && lhs is assignable
-                if (!assignable(lhs))
+                if (!isassignable(lhs))
                 {
                     throw parse_except(p_log->push(make_expected_target()));
                 }

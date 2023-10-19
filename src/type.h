@@ -93,6 +93,8 @@ struct type_id
     type_id() : tclass(type_class::UNDEFINED), idx(0) {}
 
     bool is(type_class) const;
+    template <typename ...RestT>
+    bool is(type_class type, RestT... rest) const { return is(type) || is(rest...); }
 
     type_class tclass;
     type_idx idx;
@@ -215,7 +217,7 @@ struct function_type
 
     function_type(type_id ret, array<param>&& params) : ret(ret), params(move(params)) {}
 
-    type_id ret;
+    type_id ret; // TODO also keyword?
     array<param> params;
 
     param& operator[](size_t idx) { return params[idx]; }
@@ -356,8 +358,8 @@ public:
 
     // bool exists(type_id) const;
 
-    string name(type_id) const;
-    string name(type) const;
+    string tyname(type_id) const;
+    string tyname(const type&) const;
 
     void merge(const type_registry&);
 

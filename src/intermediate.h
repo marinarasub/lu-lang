@@ -281,6 +281,7 @@ LU_CONSTEXPR bool ok(intermediate_transform_result itr)
     return itr == intermediate_transform_result::INTERMEDIATE_TRANSFORM_OK;
 }
 
+// TODO: flat array is a good representation since rn intermediate is still tree structure
 struct intermediate_program
 {
     intermediate_program() {}
@@ -289,8 +290,9 @@ struct intermediate_program
     intermediate& operator[](intermediate_addr);
     const intermediate& operator[](intermediate_addr) const;
 
+    intermediate_addr fpush(intermediate&&);
     intermediate_addr push(intermediate&&);
-    intermediate_addr write(intermediate_addr, intermediate&&); // overwrite if needed - only use for hard-coded addresses (probably unnecessary)
+    //intermediate_addr write(intermediate_addr, intermediate&&); // overwrite if needed - only use for hard-coded addresses (probably unnecessary)
 
     size_t size() const;
 
@@ -298,6 +300,7 @@ struct intermediate_program
     const intermediate_context& context() const { return _ctxt; }
 
 private:
+    vector<intermediate> _finsts; // TODO for now just put function instructions in seperate place
     vector<intermediate> _insts;
     // context...
     intermediate_context _ctxt;

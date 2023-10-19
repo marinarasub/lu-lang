@@ -285,6 +285,13 @@ const intermediate& intermediate_program::operator[](intermediate_addr iaddr) co
     return _insts[iaddr];
 }
 
+intermediate_addr intermediate_program::fpush(intermediate&& i)
+{
+    intermediate_addr iaddr = _finsts.size();
+    _finsts.push_back(move(i));
+    return iaddr;
+}
+
 intermediate_addr intermediate_program::push(intermediate&& i)
 {
     intermediate_addr iaddr = _insts.size();
@@ -529,7 +536,21 @@ namespace internal
             {
                 return make_call(ae);
             }
+            else if (isfunction(ae))
+            {
+                return make_function(ae);
+            }
             // TODO
+            throw internal_except_todo();
+        }
+
+        intermediate make_function(const analyze_expr& ae)
+        {
+            assert(ae.is(expr::FUNCTION));
+
+            const analyze_expr& params = ae[expr::FUNCTION_PARAMS_IDX];
+            const analyze_expr& body = ae[expr::FUNCTION_BODY_IDX];
+
             throw internal_except_todo();
         }
 
@@ -538,8 +559,8 @@ namespace internal
             assert(ae.is(expr::CALL));
             assert(ae[expr::CALL_ARGS_IDX].is(expr::TUPLE));
 
-            const analyze_expr& callee = ae[expr::CALL_CALLEE_IDX]; // callee
-            const analyze_expr& args = ae[expr::CALL_ARGS_IDX]; // callee
+            const analyze_expr& callee = ae[expr::CALL_CALLEE_IDX];
+            const analyze_expr& args = ae[expr::CALL_ARGS_IDX];
 
             if (callee.base_type().is(INTRINSIC))
             {

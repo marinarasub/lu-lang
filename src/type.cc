@@ -691,12 +691,12 @@ bool type_registry::exists(const type& ty) const
 //     }
 // }
 
-string type_registry::name(type_id tid) const
+string type_registry::tyname(type_id tid) const
 {
-    return name(find_type(tid));
+    return tyname(find_type(tid));
 }
 
-string type_registry::name(type ty) const
+string type_registry::tyname(const type& ty) const
 {
     switch (ty.tclass)
     {
@@ -715,21 +715,23 @@ string type_registry::name(type ty) const
             string(),
             [this](const string& acc, const function_type::param& prm)
             {
-                return string::join(acc, name(prm.tid)); // TODO param name
+                return string::join(acc, tyname(prm.tid)); // TODO param name
             });
-        return string::join(s, " -> ", name(ty.fun.ret));
+        return string::join(s, " -> ", tyname(ty.fun.ret));
     }
     case type_class::TUPLE:
     {
-        return generic::foldr(
-            ty.tup,
-            0,
-            ty.tup.arity(),
-            string(),
-            [](const string& acc, const tuple_type::member& mem)
+        string s = "(";
+        if (ty.tup.arity() > 0)
+        {
+            for (size_t i = 0; i < ty.tup.arity() - 1; ++i)
             {
-                return string::join(acc, mem.name);
-            });
+                s.append(tyname(find_type(ty.tup[i].tid)));
+                s.append(", ");
+            }
+            s.append(tyname(find_type(ty.tup[ty.tup.arity() - 1].tid)));
+        }
+        return s.append(")");
     }
     case type_class::STRUCT:
         return "STRUCT TODO";

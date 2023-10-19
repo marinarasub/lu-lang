@@ -102,11 +102,8 @@ private:
     //     return _first + idx;
     // }
 };
-constexpr size_t SSS = sizeof(parse_expr);
 
-// TODO do something liek is() in token types
-bool assignable(const parse_expr& e);
-
+bool isassignable(const parse_expr& e);
 
 struct parse_expr_tree
 {
