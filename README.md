@@ -1,4 +1,7 @@
 # lu-lang
+
+UPDATE: I haven't updated this repository, but I've actually been working on this quite a bit offline! Please let me know if you're interested.
+
 `Hello, world!` I'm working a a general purpose language for fun. Please feel free to contribute or give feedback. It's still very much a work in progress.
 
 The goal is to build an intuitive, minimal code required, statically typed language with a slightly different approach to typing from OOP or functional style.
