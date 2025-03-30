@@ -1,4 +1,4 @@
-# # [lu-lang.org](https://lu-lang.org)
+# [lu-lang.org](https://lu-lang.org)
 
 **UPDATE**: I haven't updated this repository, but I've actually been working on this quite a bit offline! Please let me know if you're interested and check out the link above ;)
 
