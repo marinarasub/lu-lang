@@ -1,6 +1,8 @@
-# lu-lang
+# # [lu-lang.org](https://lu-lang.org)
 
-UPDATE: I haven't updated this repository, but I've actually been working on this quite a bit offline! Please let me know if you're interested.
+**UPDATE**: I haven't updated this repository, but I've actually been working on this quite a bit offline! Please let me know if you're interested and check out the link above ;)
+
+## Old Description
 
 `Hello, world!` I'm working a a general purpose language for fun. Please feel free to contribute or give feedback. It's still very much a work in progress.
 
